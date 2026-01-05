@@ -6,7 +6,7 @@ name: Check for Crowdin Updates
 
 on:
   schedule:
-    - cron: '0 0 * * 1'  # Every Monday at 12:00 AM UTC, which is 10:00 AM Melbourne time (AEST)
+    - cron: '5 * * * *'  # Every Monday at 12:00 AM UTC, which is 10:00 AM Melbourne time (AEST)
   workflow_dispatch:
     inputs:
       UPDATE_PULL_REQUESTS:
