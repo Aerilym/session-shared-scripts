@@ -1,10 +1,77 @@
-from typing import Dict, List
+from typing import Dict, List, Any
 import html
 import json
 import os
+import sys
 from colorama import Fore, Style
 
-def clean_string(text: str, is_android: bool, glossary_dict: Dict[str, str], extra_replace_dict :Dict[str,str]):
+
+def print_progress(message: str):
+    """Print a progress message with spinner icon."""
+    print(f"\033[2K{Fore.WHITE}⏳ {message}{Style.RESET_ALL}", end='\r')
+
+
+def print_success(message: str):
+    """Print a success message with checkmark icon."""
+    print(f"\033[2K{Fore.GREEN}✅ {message}{Style.RESET_ALL}")
+
+
+def print_error(message: str):
+    """Print an error message with X icon."""
+    print(f"\033[2K{Fore.RED}❌ {message}{Style.RESET_ALL}")
+
+
+def print_warning(message: str):
+    """Print a warning message with warning icon."""
+    print(f"\033[2K{Fore.YELLOW}⚠️  {message}{Style.RESET_ALL}")
+
+
+def run_main(main_func):
+    """
+    Wrapper for main entry point with standard error handling.
+    
+    Args:
+        main_func: The main function to execute (should take no arguments)
+    """
+    try:
+        main_func()
+    except KeyboardInterrupt:
+        print("\nProcess interrupted by user")
+        sys.exit(0)
+    except Exception as e:
+        print_error(f"An error occurred: {str(e)}")
+        sys.exit(1)
+
+
+def ensure_file_exists(file_path: str, description: str = "file"):
+    """
+    Check that a file exists, raising FileNotFoundError if not.
+    
+    Args:
+        file_path: Path to check
+        description: Description for error message
+    """
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"Could not find {description}: '{file_path}'")
+
+
+def load_parsed_translations(input_file: str) -> Dict[str, Any]:
+    """
+    Load the pre-parsed translations JSON file.
+    
+    Args:
+        input_file: Path to the parsed translations JSON file
+        
+    Returns:
+        Dictionary containing parsed translation data
+    """
+    ensure_file_exists(input_file, "parsed translations file")
+    
+    with open(input_file, 'r', encoding='utf-8') as f:
+        return json.load(f)
+
+
+def clean_string(text: str, is_android: bool, glossary_dict: Dict[str, str], extra_replace_dict: Dict[str, str]):
     if is_android:
         # Note: any changes done for all platforms needs most likely to be done on crowdin side.
         # So we don't want to replace -&gt; with → for instance, we want the crowdin strings to not have those at all.
@@ -38,8 +105,7 @@ def clean_string(text: str, is_android: bool, glossary_dict: Dict[str, str], ext
 
 
 def load_glossary_dict(input_file: str) -> Dict[str, str]:
-    if not os.path.exists(input_file):
-        raise FileNotFoundError(f"Could not find '{input_file}' in raw translations directory")
+    ensure_file_exists(input_file, "glossary file")
 
     # Process the non-translatable string input
     non_translatable_strings_data = {}
@@ -57,10 +123,9 @@ def load_glossary_dict(input_file: str) -> Dict[str, str]:
 
 def setup_generation(input_directory: str):
     # Extract the project information
-    print(f"\033[2K{Fore.WHITE}⏳ Processing project info...{Style.RESET_ALL}", end='\r')
+    print_progress("Processing project info...")
     project_info_file = os.path.join(input_directory, "_project_info.json")
-    if not os.path.exists(project_info_file):
-        raise FileNotFoundError(f"Could not find '{project_info_file}' in raw translations directory")
+    ensure_file_exists(project_info_file, "project info file")
 
     project_details = {}
     with open(project_info_file, 'r', encoding="utf-8") as file:
@@ -73,12 +138,14 @@ def setup_generation(input_directory: str):
     target_languages: List[str] = project_details['data']['targetLanguages']
     target_languages.sort(key=lambda x: x['locale'])
     num_languages = len(target_languages)
-    print(f"\033[2K{Fore.GREEN}✅ Project info processed, {num_languages} languages will be converted{Style.RESET_ALL}")
+    print_success(f"Project info processed, {num_languages} languages will be converted")
 
     # Convert the non-translatable strings to the desired format
     rtl_languages: List[str] = [lang for lang in target_languages if lang["textDirection"] == "rtl"]
 
-    return {"source_language":source_language,
-            "rtl_languages": rtl_languages,
-            "non_translatable_strings_file":non_translatable_strings_file,
-            "target_languages": target_languages}
+    return {
+        "source_language": source_language,
+        "rtl_languages": rtl_languages,
+        "non_translatable_strings_file": non_translatable_strings_file,
+        "target_languages": target_languages
+    }
