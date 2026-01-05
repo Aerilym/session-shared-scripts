@@ -300,7 +300,15 @@ jobs:
           retention-days: 7
 
       - name: Validate strings for Android
-        run: cd ${{ github.workspace }}/android && ${{ github.workspace }}/android/gradlew app:mergePlayDebugResources
+        run: |
+          cd ${{ github.workspace }}/android
+          ./gradlew app:mergePlayDebugResources \
+            --no-daemon \
+            --parallel \
+            --build-cache \
+            -Dorg.gradle.jvmargs="-Xmx2g -XX:+HeapDumpOnOutOfMemoryError" \
+            -x lint \
+            -x test
 
 
   jobs_sync:
