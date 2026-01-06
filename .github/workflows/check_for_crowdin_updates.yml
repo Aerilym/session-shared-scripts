@@ -270,10 +270,12 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: 17
-          cache: gradle
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: wrapper
+          cache-read-only: false
 
       - name: Download parsed translations
         uses: actions/download-artifact@v4
@@ -303,10 +305,11 @@ jobs:
         run: |
           cd ${{ github.workspace }}/android
           ./gradlew app:generatePlayDebugResValues \
-            --no-daemon \
             --parallel \
             --build-cache \
-            -Dorg.gradle.jvmargs="-Xmx2g" \
+            --configuration-cache \
+            -Dorg.gradle.jvmargs="-Xmx2g -XX:+UseParallelGC" \
+            -Dorg.gradle.caching=true \
             -x lint \
             -x test
 
