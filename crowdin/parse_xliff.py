@@ -187,10 +187,14 @@ def validate_all_translations(parsed_locales: Dict[str, Any], source_locale: str
     Validate all translations against the source locale (English).
     
     Checks:
-    1. All strings in all locales have the same variables as English
+    1. All NON-PLURAL strings in all locales have the same variables as English
     2. No locale has extra strings vs English
-    3. No invalid curly braces (must be valid {variable} format)
-    4. All tags are valid: <br/> <b></b> <span></span>
+    3. No invalid curly braces (must be valid {variable} format) - checked for ALL strings
+    4. All tags are valid: <br/> <b></b> <span></span> - checked for ALL strings
+    
+    Note: Plural strings are only checked for syntax validity (3, 4), NOT for variable/tag
+    matching with English, because different languages have different plural forms
+    (e.g., English has 2 forms, Arabic has 6, Russian has 4).
     """
     result = ValidationResult()
     
@@ -202,13 +206,15 @@ def validate_all_translations(parsed_locales: Dict[str, Any], source_locale: str
     source_translations = parsed_locales[source_locale]['translations']
     source_keys = set(source_translations.keys())
     
-    # Extract variables and tags from source strings
+    # Extract variables and tags from source strings (non-plurals only)
     source_variables = {}
     source_tags = {}
     for key, trans_data in source_translations.items():
-        text = get_string_value(trans_data)
-        source_variables[key] = extract_variables(text)
-        source_tags[key] = extract_tags(text)
+        # Only track variables/tags for non-plural strings
+        if trans_data['type'] != 'plural':
+            text = trans_data['value']
+            source_variables[key] = extract_variables(text)
+            source_tags[key] = extract_tags(text)
     
     # Validate each locale
     for locale, locale_data in parsed_locales.items():
@@ -229,14 +235,17 @@ def validate_all_translations(parsed_locales: Dict[str, Any], source_locale: str
             if key not in source_keys:
                 continue
             
+            is_plural = trans_data['type'] == 'plural'
+            
             # Get all string values (handles plurals)
             string_values = get_all_string_values(trans_data)
             
             for context, text in string_values:
                 full_key = f"{key}" if context == "value" else f"{key} ({context})"
                 
-                # Check 1: Variables match source
-                if key in source_variables:
+                # Check 1: Variables match source (NON-PLURALS ONLY)
+                # Plurals are skipped because different languages have different plural forms
+                if not is_plural and key in source_variables:
                     text_variables = extract_variables(text)
                     source_vars = source_variables[key]
                     
@@ -255,7 +264,7 @@ def validate_all_translations(parsed_locales: Dict[str, Any], source_locale: str
                             f"Extra variables not in source: {{{', '.join(sorted(extra_vars))}}}"
                         )
                 
-                # Check 3: Invalid curly braces
+                # Check 3: Invalid curly braces (ALL strings including plurals)
                 brace_issues = find_invalid_braces(text)
                 for issue in brace_issues:
                     result.add_issue(
@@ -263,7 +272,7 @@ def validate_all_translations(parsed_locales: Dict[str, Any], source_locale: str
                         issue
                     )
                 
-                # Check 4a: Disallowed tags
+                # Check 4a: Disallowed tags (ALL strings including plurals)
                 disallowed = find_disallowed_tags(text)
                 for tag in disallowed:
                     result.add_issue(
@@ -271,7 +280,7 @@ def validate_all_translations(parsed_locales: Dict[str, Any], source_locale: str
                         f"Disallowed HTML tag: {tag}"
                     )
                 
-                # Check 4b: Invalid angle brackets / malformed tags
+                # Check 4b: Invalid angle brackets / malformed tags (ALL strings including plurals)
                 angle_issues = find_invalid_angle_brackets(text)
                 for issue in angle_issues:
                     result.add_issue(
@@ -279,8 +288,9 @@ def validate_all_translations(parsed_locales: Dict[str, Any], source_locale: str
                         issue
                     )
                 
-                # Check 4c: Tag count mismatch with source (only for non-source locales)
-                if locale != source_locale and key in source_tags:
+                # Check 4c: Tag count mismatch with source (NON-PLURALS ONLY, non-source locales)
+                # Plurals are skipped for the same reason as variables
+                if not is_plural and locale != source_locale and key in source_tags:
                     text_tags = extract_tags(text)
                     source_tag_counts = source_tags[key]
                     
