@@ -17,8 +17,6 @@ ALLOWED_TAGS = {'b', 'br', 'span'}
 # Regex patterns for validation
 VARIABLE_PATTERN = re.compile(r'\{(\w+)\}')
 HTML_TAG_PATTERN = re.compile(r'<(/?)(\w+)([^>]*)>')
-INVALID_ANGLE_BRACKET_PATTERN = re.compile(r'<(?!/?\s*(?:b|br|span)\s*>|/?\s*(?:b|br|span)\s*/>)')
-UNMATCHED_BRACE_PATTERN = re.compile(r'\{(?!\w+\})|(?<!\{\w{1,50})\}')
 
 
 @dataclass
