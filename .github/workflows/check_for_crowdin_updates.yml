@@ -302,11 +302,11 @@ jobs:
       - name: Validate strings for Android
         run: |
           cd ${{ github.workspace }}/android
-          ./gradlew app:mergePlayDebugResources \
+          ./gradlew app:generatePlayDebugResValues \
             --no-daemon \
             --parallel \
             --build-cache \
-            -Dorg.gradle.jvmargs="-Xmx2g -XX:+HeapDumpOnOutOfMemoryError" \
+            -Dorg.gradle.jvmargs="-Xmx2g" \
             -x lint \
             -x test
 
