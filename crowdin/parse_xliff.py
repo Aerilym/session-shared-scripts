@@ -113,12 +113,14 @@ def find_disallowed_tags(text: str) -> List[str]:
 def find_invalid_angle_brackets(text: str) -> List[str]:
     """
     Find invalid uses of angle brackets that don't form valid tags.
+    Only flags '<' that doesn't start a valid tag.
+    Standalone '>' is allowed (e.g., "{name} > {conversation_name}").
     """
     issues = []
     
-    # Find all < characters and check what follows
-    for i, char in enumerate(text):
-        if char == '<':
+    i = 0
+    while i < len(text):
+        if text[i] == '<':
             # Check if this is a valid tag start
             remaining = text[i:]
             # Valid patterns: <b>, </b>, <br/>, <span>, </span>
@@ -127,19 +129,7 @@ def find_invalid_angle_brackets(text: str) -> List[str]:
                 # Extract context for error message
                 snippet = text[i:i+15] + ('...' if len(text) > i+15 else '')
                 issues.append(f"Invalid '<' at position {i}: '{snippet}'")
-        elif char == '>' and i > 0:
-            # Check for unmatched >
-            # Look back to see if there's a matching <
-            before = text[:i]
-            last_open = before.rfind('<')
-            if last_open == -1:
-                issues.append(f"Unmatched '>' at position {i}")
-            else:
-                # Check if the content between < and > forms a valid tag
-                between = text[last_open:i+1]
-                if not HTML_TAG_PATTERN.match(between):
-                    # Could be a valid tag we already processed, skip
-                    pass
+        i += 1
     
     return issues
 
